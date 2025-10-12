@@ -50,12 +50,9 @@ heroku domains:add '*.wareality.tech' -a s3proxy
 ```
 
 * Note the DNS Target provided by Heroku.
+* a DNS Target from heroku will be provided like this bjective-ape-jo0i3z43jfk10r309zmmwzew.herokudns.com
+* 
 
-2. **Add root domain (optional)**
-
-```bash
-heroku domains:add wareality.tech -a s3proxy
-```
 
 ---
 
@@ -63,15 +60,12 @@ heroku domains:add wareality.tech -a s3proxy
 
 1. Go to your DNS provider.
 
-2. Add CNAME for wildcard:
-   | Type  | Name | Value (DNS Target) |
-   |-------|------|------------------|
-   | CNAME | *    | objective-ape-jo0i3z43jfk10r309zmmwzew.herokudns.com |
 
-3. Add CNAME/ALIAS for root domain:
-   | Type  | Name | Value (DNS Target) |
-   |-------|------|------------------|
-   | ALIAS | @    | objective-ape-jo0i3z43jfk10r309zmmwzew.herokudns.com |
+### 2. Add CNAME for Wildcard
+
+| Type  | Name | Value (DNS Target)                                         |
+|-------|------|------------------------------------------------------------|
+| CNAME | *    | objective-ape-jo0i3z43jfk10r309zmmwzew.herokudns.com      |
 
 4. Verify DNS propagation:
 
