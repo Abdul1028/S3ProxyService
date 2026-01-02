@@ -212,9 +212,20 @@ class ProxyController {
         if (projectId == null) {
             response.setStatus(404);
             response.setContentType(MediaType.TEXT_HTML_VALUE);
-            response.getWriter().write(
-                    "<h1>404 - Project Not Found</h1>"
-            );
+            String html = "<!DOCTYPE html>" +
+                    "<html><head><title>Project Not Found</title>" +
+                    "<style>" +
+                    "body { font-family: Arial, sans-serif; text-align: center; background: #f8f8f8; padding-top: 100px; }" +
+                    "h1 { color: #e74c3c; }" +
+                    "p { color: #555; font-size: 18px; }" +
+                    "a { color: #3498db; text-decoration: none; }" +
+                    "</style></head>" +
+                    "<body>" +
+                    "<h1>404 - Project Not Found</h1>" +
+                    "<p>No project found with the given name: <strong>" + subdomain + "</strong></p>" +
+                    "<p>Check your URL or go back to <a href='/'>home</a>.</p>" +
+                    "</body></html>";
+            response.getOutputStream().write(html.getBytes(StandardCharsets.UTF_8));
             return;
         }
 
