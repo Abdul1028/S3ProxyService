@@ -132,7 +132,7 @@ class ProxyController {
 
 
     private static final String API_RESOLVE_URL =
-            "https://api.wareality.tech/internal/projects/resolve"; // change to prod later
+            "https://api.wareality.tech/internal/projects/resolve";
 
     @Value("${INTERNAL_PROXY_TOKEN}")
     private String INTERNAL_TOKEN;
@@ -141,6 +141,8 @@ class ProxyController {
     private static final String BASE_PATH = "https://pushly-clone-outputs.s3.ap-south-1.amazonaws.com/__outputs";
 
 
+
+    //Helper Method to resolve project_id from subdomain
     private String resolveProjectId(String subdomain) throws Exception {
         URL url = new URL(API_RESOLVE_URL + "?subdomain=" + subdomain);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -188,7 +190,7 @@ class ProxyController {
 //            targetBase = BASE_PATH + "/" + projectId + "/production";
 //        }
 
-        /// New Logic (parsing project ids from subdomain) -> now subdomains are actual subdomains not project_ids
+        /// New Logic (parsing project ids from subdomain) ->  now subdomains are actual subdomains not project_ids
 
         String subdomain;
         String deploymentId = null;
