@@ -172,7 +172,7 @@ class ProxyController {
         System.out.println("hostname: " + hostname);
         System.out.println("hostPart: " + hostPart);
 
-//
+//        Old Logic where subdomian was project_id
 //        String subdomain = hostname.split("\\.")[0];
 //        String targetBase;
 //
@@ -188,8 +188,7 @@ class ProxyController {
 //            targetBase = BASE_PATH + "/" + projectId + "/production";
 //        }
 
-
-        /// New Logic (parsing project ids from subdomain)
+        /// New Logic (parsing project ids from subdomain) -> now subdomains are actual subdomains not project_ids
 
         String subdomain;
         String deploymentId = null;
