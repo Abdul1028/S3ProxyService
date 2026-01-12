@@ -1,10 +1,6 @@
 package com.pushly.proxy.S3ReverseProxy.filter;
 
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
+import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -24,10 +20,11 @@ public class HttpsRedirectFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse res = (HttpServletResponse) response;
 
-        // Important when behind ALB / Heroku / proxy
-        String proto = req.getHeader("X-Forwarded-Proto");
+        boolean isSecure =
+                req.isSecure() ||
+                        "https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto"));
 
-        if ("http".equalsIgnoreCase(proto)) {
+        if (!isSecure) {
             String redirectUrl =
                     "https://" + req.getServerName() + req.getRequestURI();
 
