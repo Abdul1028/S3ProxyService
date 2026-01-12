@@ -106,6 +106,9 @@
 
 package com.pushly.proxy.S3ReverseProxy.Controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.HttpHeaders;
@@ -122,30 +125,120 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 @RestController
 class ProxyController {
 
+
+    private static final String API_RESOLVE_URL =
+            "https://api.wareality.tech/internal/projects/resolve";
+
+    @Value("${INTERNAL_PROXY_TOKEN}")
+    private String INTERNAL_TOKEN;
+
+
     private static final String BASE_PATH = "https://pushly-clone-outputs.s3.ap-south-1.amazonaws.com/__outputs";
+
+
+
+    //Helper Method to resolve project_id from subdomain
+    private String resolveProjectId(String subdomain) throws Exception {
+        URL url = new URL(API_RESOLVE_URL + "?subdomain=" + subdomain);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("X-Internal-Token", INTERNAL_TOKEN);
+        conn.setConnectTimeout(2000);
+        conn.setReadTimeout(2000);
+
+        if (conn.getResponseCode() != 200) return null;
+
+        ObjectMapper mapper = new ObjectMapper();
+        try (InputStream is = conn.getInputStream()) {
+            Map<String, String> map = mapper.readValue(
+                    is,
+                    new TypeReference<>() {}
+            );
+            String projectId = map.get("projectId");
+            return (projectId == null || projectId.isBlank()) ? null : projectId;
+        }
+    }
+
 
     @RequestMapping("/**")
     public void proxy(HttpServletRequest request, HttpServletResponse response) throws Exception {
         String hostname = request.getServerName();  // e.g. sub.example.com
-        String subdomain = hostname.split("\\.")[0];
+        String hostPart = hostname.split("\\.")[0];
+
+        System.out.println("hostname: " + hostname);
+        System.out.println("hostPart: " + hostPart);
+
+//        Old Logic where subdomian was project_id
+//        String subdomain = hostname.split("\\.")[0];
+//        String targetBase;
+//
+//        if (subdomain.contains("--")) {
+//            // Staging deployment
+//            String[] parts = subdomain.split("--", 2); // split into 2 parts only
+//            String deploymentId = parts[0];
+//            String projectId = parts[1];
+//            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
+//        } else {
+//            // Production deployment
+//            String projectId = subdomain;
+//            targetBase = BASE_PATH + "/" + projectId + "/production";
+//        }
+
+        /// New Logic (parsing project ids from subdomain) ->  now subdomains are actual subdomains not project_ids
+
+        String subdomain;
+        String deploymentId = null;
+
+        // staging: deploymentId--subdomain
+        if (hostPart.contains("--")) {
+            String[] parts = hostPart.split("--", 2);
+            deploymentId = parts[0];
+            subdomain = parts[1];
+        } else {
+            // production
+            subdomain = hostPart;
+        }
+
+        // 🔥 RESOLVE projectId via API
+        String projectId = resolveProjectId(subdomain);
+        System.out.printf("projectId: %s\n", projectId);
+
+        if (projectId == null) {
+            response.setStatus(404);
+            response.setContentType(MediaType.TEXT_HTML_VALUE);
+            String html = "<!DOCTYPE html>" +
+                    "<html><head><title>Project Not Found</title>" +
+                    "<style>" +
+                    "body { font-family: Arial, sans-serif; text-align: center; background: #f8f8f8; padding-top: 100px; }" +
+                    "h1 { color: #e74c3c; }" +
+                    "p { color: #555; font-size: 18px; }" +
+                    "a { color: #3498db; text-decoration: none; }" +
+                    "</style></head>" +
+                    "<body>" +
+                    "<h1>404 - Project Not Found</h1>" +
+                    "<p>No project found with the given name: <strong>" + subdomain + "</strong></p>" +
+                    "<p>Check your URL or go back to <a href='/'>home</a>.</p>" +
+                    "</body></html>";
+            response.getOutputStream().write(html.getBytes(StandardCharsets.UTF_8));
+            return;
+        }
 
         String targetBase;
-
-        if (subdomain.contains("--")) {
-            // Staging deployment
-            String[] parts = subdomain.split("--", 2); // split into 2 parts only
-            String deploymentId = parts[0];
-            String projectId = parts[1];
+        if (deploymentId != null) {
             targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
         } else {
-            // Production deployment
-            String projectId = subdomain;
             targetBase = BASE_PATH + "/" + projectId + "/production";
         }
+
+
+        //New Logic ends here
+
 
         String path = request.getRequestURI();
         if ("/".equals(path)) path = "/index.html";  // mimic Node.js behavior
