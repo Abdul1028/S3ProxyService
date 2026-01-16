@@ -187,8 +187,6 @@ class ProxyController {
         }
     }
 
-
-
     @RequestMapping("/**")
     public void proxy(HttpServletRequest request, HttpServletResponse response) throws Exception {
         String hostname = request.getServerName();  // e.g. sub.example.com
