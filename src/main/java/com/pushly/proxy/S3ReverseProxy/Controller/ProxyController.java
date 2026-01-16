@@ -169,7 +169,7 @@ class ProxyController {
     //Helper Method to resolve Active Production Deployment id from subdomain
     private String resolveActiveProductionDeployment(String subdomain) throws Exception {
         URL url = new URL(
-                "https://api.wareality.tech/internal/projects/resolve-production?subdomain=" + subdomain
+                "https://api.wareality.tech/internal/projects/resolve?subdomain=" + subdomain
         );
 
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
