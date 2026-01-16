@@ -205,6 +205,7 @@ class ProxyController {
             subdomain = hostPart;
         }
 
+
         // 🔥 RESOLVE projectId via API
         String projectId = resolveProjectId(subdomain);
         System.out.printf("projectId: %s\n", projectId);
