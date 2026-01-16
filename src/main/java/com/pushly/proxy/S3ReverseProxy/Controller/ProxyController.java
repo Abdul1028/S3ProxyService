@@ -274,7 +274,7 @@ class ProxyController {
 
             // If 404, show custom "project not found" page
             if (status == 404) {
-                // 🔥 SPA fallback → serve index.html instead
+                //  SPA fallback → serve index.html instead
                 String indexUrl = targetBase + "/index.html";
                 try {
                     HttpURLConnection indexConn =
