@@ -166,6 +166,29 @@ class ProxyController {
     }
 
 
+    //Helper Method to resolve Active Production Deployment id from subdomain
+    private String resolveActiveProductionDeployment(String subdomain) throws Exception {
+        URL url = new URL(
+                "https://api.wareality.tech/internal/projects/resolve?subdomain=" + subdomain
+        );
+
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("X-Internal-Token", INTERNAL_TOKEN);
+        conn.setConnectTimeout(2000);
+        conn.setReadTimeout(2000);
+
+        if (conn.getResponseCode() != 200) return null;
+
+        ObjectMapper mapper = new ObjectMapper();
+        try (InputStream is = conn.getInputStream()) {
+            Map<String, String> map = mapper.readValue(is, new TypeReference<>() {});
+            return map.get("activeDeploymentId");
+        }
+    }
+
+
+
     @RequestMapping("/**")
     public void proxy(HttpServletRequest request, HttpServletResponse response) throws Exception {
         String hostname = request.getServerName();  // e.g. sub.example.com
@@ -230,16 +253,40 @@ class ProxyController {
             return;
         }
 
+//        String targetBase;
+//        if (deploymentId != null) {
+//            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
+//        } else {
+//            targetBase = BASE_PATH + "/" + projectId + "/production";
+//        }
+
         String targetBase;
+
         if (deploymentId != null) {
+            // STAGING / PREVIEW URL
             targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
         } else {
-            targetBase = BASE_PATH + "/" + projectId + "/production";
+            // PRODUCTION URL → resolve active deployment
+            String activeDeploymentId = resolveActiveProductionDeployment(subdomain);
+            System.out.println("found activeDeploymentId: " + activeDeploymentId);
+            System.out.println("activeDeploymentId: " + activeDeploymentId);
+
+
+            if (activeDeploymentId == null || activeDeploymentId.isBlank()) {
+                response.setStatus(404);
+                response.setContentType(MediaType.TEXT_HTML_VALUE);
+                response.getOutputStream().write(
+                        ("<h1>No active production deployment</h1>" +
+                                "<p>This project has not been deployed to production yet.</p>")
+                                .getBytes(StandardCharsets.UTF_8)
+                );
+                return;
+            }
+
+            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + activeDeploymentId;
         }
 
-
         //New Logic ends here
-
 
         String path = request.getRequestURI();
         if ("/".equals(path)) path = "/index.html";  // mimic Node.js behavior
