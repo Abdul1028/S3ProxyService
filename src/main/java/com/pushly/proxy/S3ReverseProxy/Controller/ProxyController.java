@@ -274,24 +274,34 @@ class ProxyController {
 
             // If 404, show custom "project not found" page
             if (status == 404) {
-                response.setStatus(404);
-                response.setContentType(MediaType.TEXT_HTML_VALUE);
-                String html = "<!DOCTYPE html>" +
-                        "<html><head><title>Project Not Found</title>" +
-                        "<style>" +
-                        "body { font-family: Arial, sans-serif; text-align: center; background: #f8f8f8; padding-top: 100px; }" +
-                        "h1 { color: #e74c3c; }" +
-                        "p { color: #555; font-size: 18px; }" +
-                        "a { color: #3498db; text-decoration: none; }" +
-                        "</style></head>" +
-                        "<body>" +
-                        "<h1>404 - Project Not Found</h1>" +
-                        "<p>No project found with the given name: <strong>" + subdomain + "</strong></p>" +
-                        "<p>Check your URL or go back to <a href='/'>home</a>.</p>" +
-                        "</body></html>";
-                response.getOutputStream().write(html.getBytes(StandardCharsets.UTF_8));
-                return;
+                // 🔥 SPA fallback → serve index.html instead
+                String indexUrl = targetBase + "/index.html";
+                try {
+                    HttpURLConnection indexConn =
+                            (HttpURLConnection) new URL(indexUrl).openConnection();
+
+                    indexConn.setRequestMethod("GET");
+                    indexConn.setDoInput(true);
+
+                    response.setStatus(200);
+                    response.setContentType(MediaType.TEXT_HTML_VALUE);
+
+                    try (InputStream is = indexConn.getInputStream()) {
+                        StreamUtils.copy(is, response.getOutputStream());
+                    }
+                    return;
+                } catch (Exception ex) {
+                    // If index.html ALSO missing → real error
+                    response.setStatus(500);
+                    response.setContentType(MediaType.TEXT_HTML_VALUE);
+                    response.getOutputStream().write(
+                            "<h1>Application Error</h1><p>index.html not found</p>"
+                                    .getBytes(StandardCharsets.UTF_8)
+                    );
+                    return;
+                }
             }
+
 
             // Normal response
             response.setStatus(status);
