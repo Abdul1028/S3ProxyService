@@ -267,6 +267,9 @@ class ProxyController {
         } else {
             // PRODUCTION URL → resolve active deployment
             String activeDeploymentId = resolveActiveProductionDeployment(subdomain);
+            System.out.println("found activeDeploymentId: " + activeDeploymentId);
+            System.out.println("activeDeploymentId: " + activeDeploymentId);
+
 
             if (activeDeploymentId == null || activeDeploymentId.isBlank()) {
                 response.setStatus(404);
