@@ -1,9 +1,5 @@
-//
 //package com.pushly.proxy.S3ReverseProxy.Controller;
 //
-//import com.fasterxml.jackson.core.type.TypeReference;
-//import com.fasterxml.jackson.databind.ObjectMapper;
-//import org.springframework.beans.factory.annotation.Value;
 //import org.springframework.boot.SpringApplication;
 //import org.springframework.boot.autoconfigure.SpringBootApplication;
 //import org.springframework.http.HttpHeaders;
@@ -19,425 +15,301 @@
 //import java.io.OutputStream;
 //import java.net.HttpURLConnection;
 //import java.net.URL;
-//import java.nio.charset.StandardCharsets;
-//import java.util.Map;
+//import org.springframework.web.bind.annotation.RestController;
 //
 //@RestController
 //class ProxyController {
 //
-//
-//    private static final String API_RESOLVE_URL =
-//            "https://api.wareality.tech/internal/projects/resolve";
-//
-//    @Value("${INTERNAL_PROXY_TOKEN}")
-//    private String INTERNAL_TOKEN;
-//
-//
 //    private static final String BASE_PATH = "https://pushly-clone-outputs.s3.ap-south-1.amazonaws.com/__outputs";
-//
-//
-//
-//    //Helper Method to resolve project_id from subdomain
-//    private String resolveProjectId(String subdomain) throws Exception {
-//        URL url = new URL(API_RESOLVE_URL + "?subdomain=" + subdomain);
-//        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//
-//        conn.setRequestMethod("GET");
-//        conn.setRequestProperty("X-Internal-Token", INTERNAL_TOKEN);
-//        conn.setConnectTimeout(2000);
-//        conn.setReadTimeout(2000);
-//
-//        if (conn.getResponseCode() != 200) return null;
-//
-//        ObjectMapper mapper = new ObjectMapper();
-//        try (InputStream is = conn.getInputStream()) {
-//            Map<String, String> map = mapper.readValue(
-//                    is,
-//                    new TypeReference<>() {}
-//            );
-//            String projectId = map.get("projectId");
-//            return (projectId == null || projectId.isBlank()) ? null : projectId;
-//        }
-//    }
-//
-//
-//    //Helper Method to resolve Active Production Deployment id from subdomain
-//    private String resolveActiveProductionDeployment(String subdomain) throws Exception {
-//        URL url = new URL(
-//                "https://api.wareality.tech/internal/projects/resolve?subdomain=" + subdomain
-//        );
-//
-//        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//        conn.setRequestMethod("GET");
-//        conn.setRequestProperty("X-Internal-Token", INTERNAL_TOKEN);
-//        conn.setConnectTimeout(2000);
-//        conn.setReadTimeout(2000);
-//
-//        if (conn.getResponseCode() != 200) return null;
-//
-//        ObjectMapper mapper = new ObjectMapper();
-//        try (InputStream is = conn.getInputStream()) {
-//            Map<String, String> map = mapper.readValue(is, new TypeReference<>() {});
-//            return map.get("activeDeploymentId");
-//        }
-//    }
-//
-//
 //
 //    @RequestMapping("/**")
 //    public void proxy(HttpServletRequest request, HttpServletResponse response) throws Exception {
 //        String hostname = request.getServerName();  // e.g. sub.example.com
-//        String hostPart = hostname.split("\\.")[0];
+//        String subdomain = hostname.split("\\.")[0];
 //
-//        System.out.println("hostname: " + hostname);
-//        System.out.println("hostPart: " + hostPart);
-//
-////        Old Logic where subdomian was project_id
-////        String subdomain = hostname.split("\\.")[0];
-////        String targetBase;
-////
-////        if (subdomain.contains("--")) {
-////            // Staging deployment
-////            String[] parts = subdomain.split("--", 2); // split into 2 parts only
-////            String deploymentId = parts[0];
-////            String projectId = parts[1];
-////            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
-////        } else {
-////            // Production deployment
-////            String projectId = subdomain;
-////            targetBase = BASE_PATH + "/" + projectId + "/production";
-////        }
-//
-//        /// New Logic (parsing project ids from subdomain) ->  now subdomains are actual subdomains not project_ids
-//
-//        String subdomain;
-//        String deploymentId = null;
-//
-//        // staging: deploymentId--subdomain
-//        if (hostPart.contains("--")) {
-//            String[] parts = hostPart.split("--", 2);
-//            deploymentId = parts[0];
-//            subdomain = parts[1];
-//        } else {
-//            // production
-//            subdomain = hostPart;
-//        }
-//
-//        // 🔥 RESOLVE projectId via API
-//        String projectId = resolveProjectId(subdomain);
-//        System.out.printf("projectId: %s\n", projectId);
-//
-//        if (projectId == null) {
-//            response.setStatus(404);
-//            response.setContentType(MediaType.TEXT_HTML_VALUE);
-//            String html = "<!DOCTYPE html>" +
-//                    "<html><head><title>Project Not Found</title>" +
-//                    "<style>" +
-//                    "body { font-family: Arial, sans-serif; text-align: center; background: #f8f8f8; padding-top: 100px; }" +
-//                    "h1 { color: #e74c3c; }" +
-//                    "p { color: #555; font-size: 18px; }" +
-//                    "a { color: #3498db; text-decoration: none; }" +
-//                    "</style></head>" +
-//                    "<body>" +
-//                    "<h1>404 - Project Not Found</h1>" +
-//                    "<p>No project found with the given name: <strong>" + subdomain + "</strong></p>" +
-//                    "<p>Check your URL or go back to <a href='/'>home</a>.</p>" +
-//                    "</body></html>";
-//            response.getOutputStream().write(html.getBytes(StandardCharsets.UTF_8));
-//            return;
-//        }
-//
-////        String targetBase;
-////        if (deploymentId != null) {
-////            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
-////        } else {
-////            targetBase = BASE_PATH + "/" + projectId + "/production";
-////        }
-//
+////        String targetBase = BASE_PATH + "/" + subdomain;
 //        String targetBase;
 //
-//        if (deploymentId != null) {
-//            // STAGING / PREVIEW URL
+//        if (subdomain.contains("--")) {
+//            // Staging deployment
+//            String[] parts = subdomain.split("--", 2); // split into 2 parts only
+//            String deploymentId = parts[0];
+//            String projectId = parts[1];
 //            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
+//            System.out.println(projectId +" " +deploymentId);
 //        } else {
-//            // PRODUCTION URL → resolve active deployment
-//            String activeDeploymentId = resolveActiveProductionDeployment(subdomain);
-//            System.out.println("found activeDeploymentId: " + activeDeploymentId);
-//            System.out.println("activeDeploymentId: " + activeDeploymentId);
-//
-//
-//            if (activeDeploymentId == null || activeDeploymentId.isBlank()) {
-//                response.setStatus(404);
-//                response.setContentType(MediaType.TEXT_HTML_VALUE);
-//                response.getOutputStream().write(
-//                        ("<h1>No active production deployment</h1>" +
-//                                "<p>This project has not been deployed to production yet.</p>")
-//                                .getBytes(StandardCharsets.UTF_8)
-//                );
-//                return;
-//            }
-//
-//            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + activeDeploymentId;
+//            // Production deployment
+//            String projectId = subdomain;
+//            targetBase = BASE_PATH + "/" + projectId + "/production";
 //        }
 //
-//        //New Logic ends here
-//
+//        // Reconstruct target URL
 //        String path = request.getRequestURI();
-//        if ("/".equals(path)) path = "/index.html";  // mimic Node.js behavior
+//        if ("/".equals(path)) {
+//            path = "/index.html";  // mimic Node.js behavior
+//        }
 //        String query = request.getQueryString();
 //        String targetUrl = targetBase + path + (query != null ? "?" + query : "");
 //
-//        try {
-//            URL url = new URL(targetUrl);
-//            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//            conn.setRequestMethod(request.getMethod());
-//            conn.setDoInput(true);
+//        // Open connection
+//        URL url = new URL(targetUrl);
+//        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+//        conn.setRequestMethod(request.getMethod());
+//        conn.setDoInput(true);
 //
-//            // Copy request headers
-//            java.util.Enumeration<String> headerNames = request.getHeaderNames();
-//            while (headerNames.hasMoreElements()) {
-//                String headerName = headerNames.nextElement();
-//                if ("host".equalsIgnoreCase(headerName)) continue;
-//                conn.setRequestProperty(headerName, request.getHeader(headerName));
-//            }
-//
-//            // Copy request body if needed
-//            if (HttpMethod.POST.matches(request.getMethod()) ||
-//                    HttpMethod.PUT.matches(request.getMethod()) ||
-//                    HttpMethod.PATCH.matches(request.getMethod())) {
-//                conn.setDoOutput(true);
-//                try (OutputStream os = conn.getOutputStream();
-//                     InputStream is = request.getInputStream()) {
-//                    StreamUtils.copy(is, os);
-//                }
-//            }
-//
-//            int status = conn.getResponseCode();
-//
-//            // If 404, show custom "project not found" page
-//            if (status == 404) {
-//                //  SPA fallback → serve index.html instead
-//                String indexUrl = targetBase + "/index.html";
-//                try {
-//                    HttpURLConnection indexConn =
-//                            (HttpURLConnection) new URL(indexUrl).openConnection();
-//
-//                    indexConn.setRequestMethod("GET");
-//                    indexConn.setDoInput(true);
-//
-//                    response.setStatus(200);
-//                    response.setContentType(MediaType.TEXT_HTML_VALUE);
-//
-//                    try (InputStream is = indexConn.getInputStream()) {
-//                        StreamUtils.copy(is, response.getOutputStream());
-//                    }
-//                    return;
-//                } catch (Exception ex) {
-//                    // If index.html ALSO missing → real error
-//                    response.setStatus(500);
-//                    response.setContentType(MediaType.TEXT_HTML_VALUE);
-//                    response.getOutputStream().write(
-//                            "<h1>Application Error</h1><p>index.html not found</p>"
-//                                    .getBytes(StandardCharsets.UTF_8)
-//                    );
-//                    return;
-//                }
-//            }
-//
-//
-//            // Normal response
-//            response.setStatus(status);
-//
-//            // Copy response headers
-//            conn.getHeaderFields().forEach((key, values) -> {
-//                if (key != null) {
-//                    for (String value : values) {
-//                        response.addHeader(key, value);
-//                    }
-//                }
-//            });
-//
-//            // Copy response body
-//            try (InputStream is = (status >= 400 ? conn.getErrorStream() : conn.getInputStream())) {
-//                if (is != null) {
-//                    StreamUtils.copy(is, response.getOutputStream());
-//                }
-//            }
-//
-//        } catch (Exception e) {
-//            // Fallback page on connection error
-//            response.setStatus(500);
-//            response.setContentType(MediaType.TEXT_HTML_VALUE);
-//            String html = "<!DOCTYPE html>" +
-//                    "<html><head><title>Error</title>" +
-//                    "<style>" +
-//                    "body { font-family: Arial, sans-serif; text-align: center; background: #f8f8f8; padding-top: 100px; }" +
-//                    "h1 { color: #e74c3c; }" +
-//                    "p { color: #555; font-size: 18px; }" +
-//                    "a { color: #3498db; text-decoration: none; }" +
-//                    "</style></head>" +
-//                    "<body>" +
-//                    "<h1>Oops! Something went wrong</h1>" +
-//                    "<p>Could not fetch project: <strong>" + subdomain + "</strong></p>" +
-//                    "<p>Try again later or go back to <a href='/'>home</a>.</p>" +
-//                    "</body></html>";
-//            response.getOutputStream().write(html.getBytes(StandardCharsets.UTF_8));
+//        // Copy request headers
+//        // Copy request headers
+//        java.util.Enumeration<String> headerNames = request.getHeaderNames();
+//        while (headerNames.hasMoreElements()) {
+//            String headerName = headerNames.nextElement();
+//            if ("host".equalsIgnoreCase(headerName)) continue;
+//            conn.setRequestProperty(headerName, request.getHeader(headerName));
 //        }
+//
+//        // Copy body if needed (POST/PUT/PATCH)
+//        if (HttpMethod.POST.matches(request.getMethod()) ||
+//                HttpMethod.PUT.matches(request.getMethod()) ||
+//                HttpMethod.PATCH.matches(request.getMethod())) {
+//            conn.setDoOutput(true);
+//            try (OutputStream os = conn.getOutputStream();
+//                 InputStream is = request.getInputStream()) {
+//                StreamUtils.copy(is, os);
+//            }
+//        }
+//
+//        // Get response status
+//        int status = conn.getResponseCode();
+//        response.setStatus(status);
+//
+//        // Copy response headers
+//        conn.getHeaderFields().forEach((key, values) -> {
+//            if (key != null) {
+//                for (String value : values) {
+//                    response.addHeader(key, value);
+//                }
+//            }
+//        });
+//
+//        // Copy response body
+//        try (InputStream is = (status >= 400 ? conn.getErrorStream() : conn.getInputStream())) {
+//            if (is != null) {
+//                StreamUtils.copy(is, response.getOutputStream());
+//            }
+//        }
+//
+//
+//
 //    }
 //}
+//
 
 
 package com.pushly.proxy.S3ReverseProxy.Controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.util.StreamUtils;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Map;
 
 @RestController
 class ProxyController {
 
+
     private static final String API_RESOLVE_URL =
             "https://api.wareality.tech/internal/projects/resolve";
-
-    private static final String BASE_PATH =
-            "https://pushly-clone-outputs.s3.ap-south-1.amazonaws.com/__outputs";
 
     @Value("${INTERNAL_PROXY_TOKEN}")
     private String INTERNAL_TOKEN;
 
-    private final ObjectMapper mapper = new ObjectMapper();
 
-    // ====== CACHE (30s TTL) =======
-    private final Map<String, ResolveInfo> resolveCache = new ConcurrentHashMap<>();
-    private final long RESOLVE_TTL_MS = 30_000;
+    private static final String BASE_PATH = "https://pushly-clone-outputs.s3.ap-south-1.amazonaws.com/__outputs";
 
-    private static class ResolveInfo {
-        public String projectId;
-        public String activeDeploymentId;
-        public long expiresAt;
-    }
 
-    private ResolveInfo resolveProject(String subdomain) throws Exception {
-        long now = System.currentTimeMillis();
-        ResolveInfo cached = resolveCache.get(subdomain);
 
-        if (cached != null && cached.expiresAt > now) {
-            return cached;
-        }
-
+    //Helper Method to resolve project_id from subdomain
+    private String resolveProjectId(String subdomain) throws Exception {
         URL url = new URL(API_RESOLVE_URL + "?subdomain=" + subdomain);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setConnectTimeout(2000);
-        conn.setReadTimeout(2000);
+
         conn.setRequestMethod("GET");
         conn.setRequestProperty("X-Internal-Token", INTERNAL_TOKEN);
+        conn.setConnectTimeout(2000);
+        conn.setReadTimeout(2000);
 
         if (conn.getResponseCode() != 200) return null;
 
+        ObjectMapper mapper = new ObjectMapper();
         try (InputStream is = conn.getInputStream()) {
-            Map<String,String> map = mapper.readValue(is, Map.class);
-
-            ResolveInfo info = new ResolveInfo();
-            info.projectId = map.get("projectId");
-            info.activeDeploymentId = map.get("activeDeploymentId");
-            info.expiresAt = now + RESOLVE_TTL_MS;
-
-            resolveCache.put(subdomain, info);
-            return info;
+            Map<String, String> map = mapper.readValue(
+                    is,
+                    new TypeReference<>() {}
+            );
+            String projectId = map.get("projectId");
+            return (projectId == null || projectId.isBlank()) ? null : projectId;
         }
     }
 
-    // detect static hashed assets
-    private boolean isStaticAsset(String path) {
-        return path.startsWith("/static/")
-                || path.matches(".+\\.[a-f0-9]{8,}\\.(js|css|png|webp|jpg|jpeg|svg|map|ico)$")
-                || path.endsWith(".png") || path.endsWith(".jpg")
-                || path.endsWith(".webp") || path.endsWith(".css")
-                || path.endsWith(".js") || path.endsWith(".map")
-                || path.endsWith(".ico") || path.endsWith(".svg");
+
+    //Helper Method to resolve Active Production Deployment id from subdomain
+    private String resolveActiveProductionDeployment(String subdomain) throws Exception {
+        URL url = new URL(
+                "https://api.wareality.tech/internal/projects/resolve?subdomain=" + subdomain
+        );
+
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("X-Internal-Token", INTERNAL_TOKEN);
+        conn.setConnectTimeout(2000);
+        conn.setReadTimeout(2000);
+
+        if (conn.getResponseCode() != 200) return null;
+
+        ObjectMapper mapper = new ObjectMapper();
+        try (InputStream is = conn.getInputStream()) {
+            Map<String, String> map = mapper.readValue(is, new TypeReference<>() {});
+            return map.get("activeDeploymentId");
+        }
     }
+
+
 
     @RequestMapping("/**")
     public void proxy(HttpServletRequest request, HttpServletResponse response) throws Exception {
-
-        String hostname = request.getServerName();
+        String hostname = request.getServerName();  // e.g. sub.example.com
         String hostPart = hostname.split("\\.")[0];
+
+        System.out.println("hostname: " + hostname);
+        System.out.println("hostPart: " + hostPart);
+
+//        Old Logic where subdomian was project_id
+//        String subdomain = hostname.split("\\.")[0];
+//        String targetBase;
+//
+//        if (subdomain.contains("--")) {
+//            // Staging deployment
+//            String[] parts = subdomain.split("--", 2); // split into 2 parts only
+//            String deploymentId = parts[0];
+//            String projectId = parts[1];
+//            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
+//        } else {
+//            // Production deployment
+//            String projectId = subdomain;
+//            targetBase = BASE_PATH + "/" + projectId + "/production";
+//        }
+
+        /// New Logic (parsing project ids from subdomain) ->  now subdomains are actual subdomains not project_ids
 
         String subdomain;
         String deploymentId = null;
 
+        // staging: deploymentId--subdomain
         if (hostPart.contains("--")) {
             String[] parts = hostPart.split("--", 2);
             deploymentId = parts[0];
             subdomain = parts[1];
         } else {
+            // production
             subdomain = hostPart;
         }
 
-        ResolveInfo info = resolveProject(subdomain);
+        // 🔥 RESOLVE projectId via API
+        String projectId = resolveProjectId(subdomain);
+        System.out.printf("projectId: %s\n", projectId);
 
-        if (info == null || info.projectId == null) {
-            // custom 404 page preserved
+        if (projectId == null) {
             response.setStatus(404);
             response.setContentType(MediaType.TEXT_HTML_VALUE);
-            response.getOutputStream().write((
+            String html = "<!DOCTYPE html>" +
+                    "<html><head><title>Project Not Found</title>" +
+                    "<style>" +
+                    "body { font-family: Arial, sans-serif; text-align: center; background: #f8f8f8; padding-top: 100px; }" +
+                    "h1 { color: #e74c3c; }" +
+                    "p { color: #555; font-size: 18px; }" +
+                    "a { color: #3498db; text-decoration: none; }" +
+                    "</style></head>" +
+                    "<body>" +
                     "<h1>404 - Project Not Found</h1>" +
-                            "<p>No project found named: <strong>" + subdomain + "</strong></p>"
-            ).getBytes(StandardCharsets.UTF_8));
+                    "<p>No project found with the given name: <strong>" + subdomain + "</strong></p>" +
+                    "<p>Check your URL or go back to <a href='/'>home</a>.</p>" +
+                    "</body></html>";
+            response.getOutputStream().write(html.getBytes(StandardCharsets.UTF_8));
             return;
         }
 
-        if (deploymentId == null) {
-            deploymentId = info.activeDeploymentId;
-            if (deploymentId == null || deploymentId.isBlank()) {
+//        String targetBase;
+//        if (deploymentId != null) {
+//            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
+//        } else {
+//            targetBase = BASE_PATH + "/" + projectId + "/production";
+//        }
+
+        String targetBase;
+
+        if (deploymentId != null) {
+            // STAGING / PREVIEW URL
+            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + deploymentId;
+        } else {
+            // PRODUCTION URL → resolve active deployment
+            String activeDeploymentId = resolveActiveProductionDeployment(subdomain);
+            System.out.println("found activeDeploymentId: " + activeDeploymentId);
+            System.out.println("activeDeploymentId: " + activeDeploymentId);
+
+
+            if (activeDeploymentId == null || activeDeploymentId.isBlank()) {
                 response.setStatus(404);
                 response.setContentType(MediaType.TEXT_HTML_VALUE);
-                response.getOutputStream().write((
-                        "<h1>No active production deployment</h1>"
-                ).getBytes(StandardCharsets.UTF_8));
+                response.getOutputStream().write(
+                        ("<h1>No active production deployment</h1>" +
+                                "<p>This project has not been deployed to production yet.</p>")
+                                .getBytes(StandardCharsets.UTF_8)
+                );
                 return;
             }
+
+            targetBase = BASE_PATH + "/" + projectId + "/deployments/" + activeDeploymentId;
         }
 
-        String targetBase = BASE_PATH + "/" + info.projectId + "/deployments/" + deploymentId;
+        //New Logic ends here
 
         String path = request.getRequestURI();
-        if ("/".equals(path)) path = "/index.html";
+        if ("/".equals(path)) path = "/index.html";  // mimic Node.js behavior
         String query = request.getQueryString();
         String targetUrl = targetBase + path + (query != null ? "?" + query : "");
 
         try {
             URL url = new URL(targetUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(2000);
-            conn.setReadTimeout(3000);
             conn.setRequestMethod(request.getMethod());
             conn.setDoInput(true);
 
-            // Forward headers except Host
-            Collections.list(request.getHeaderNames()).forEach(h -> {
-                if (!"host".equalsIgnoreCase(h)) {
-                    conn.setRequestProperty(h, request.getHeader(h));
-                }
-            });
+            // Copy request headers
+            java.util.Enumeration<String> headerNames = request.getHeaderNames();
+            while (headerNames.hasMoreElements()) {
+                String headerName = headerNames.nextElement();
+                if ("host".equalsIgnoreCase(headerName)) continue;
+                conn.setRequestProperty(headerName, request.getHeader(headerName));
+            }
 
-            // Copy body for POST/PATCH/PUT
-            if (HttpMethod.POST.matches(request.getMethod())
-                    || HttpMethod.PUT.matches(request.getMethod())
-                    || HttpMethod.PATCH.matches(request.getMethod())) {
+            // Copy request body if needed
+            if (HttpMethod.POST.matches(request.getMethod()) ||
+                    HttpMethod.PUT.matches(request.getMethod()) ||
+                    HttpMethod.PATCH.matches(request.getMethod())) {
                 conn.setDoOutput(true);
                 try (OutputStream os = conn.getOutputStream();
                      InputStream is = request.getInputStream()) {
@@ -447,48 +319,74 @@ class ProxyController {
 
             int status = conn.getResponseCode();
 
-            // ==== STATIC ASSET CACHE ====
-            if (isStaticAsset(path)) {
-                response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-            } else if (path.equals("/index.html")) {
-                response.setHeader("Cache-Control", "no-cache");
-            }
+            // If 404, show custom "project not found" page
+            if (status == 404) {
+                //  SPA fallback → serve index.html instead
+                String indexUrl = targetBase + "/index.html";
+                try {
+                    HttpURLConnection indexConn =
+                            (HttpURLConnection) new URL(indexUrl).openConnection();
 
-            // SPA fallback (A1)
-            if (status == 404 && !isStaticAsset(path)) {
-                // serve index.html instead
-                URL indexUrl = new URL(targetBase + "/index.html");
-                HttpURLConnection idx = (HttpURLConnection) indexUrl.openConnection();
-                idx.setRequestMethod("GET");
-                idx.setDoInput(true);
+                    indexConn.setRequestMethod("GET");
+                    indexConn.setDoInput(true);
 
-                response.setStatus(200);
-                response.setHeader("Cache-Control", "no-cache");
-                try (InputStream is = idx.getInputStream()) {
-                    StreamUtils.copy(is, response.getOutputStream());
+                    response.setStatus(200);
+                    response.setContentType(MediaType.TEXT_HTML_VALUE);
+
+                    try (InputStream is = indexConn.getInputStream()) {
+                        StreamUtils.copy(is, response.getOutputStream());
+                    }
+                    return;
+                } catch (Exception ex) {
+                    // If index.html ALSO missing → real error
+                    response.setStatus(500);
+                    response.setContentType(MediaType.TEXT_HTML_VALUE);
+                    response.getOutputStream().write(
+                            "<h1>Application Error</h1><p>index.html not found</p>"
+                                    .getBytes(StandardCharsets.UTF_8)
+                    );
+                    return;
                 }
-                return;
             }
 
-            // normal response
+
+            // Normal response
             response.setStatus(status);
-            conn.getHeaderFields().forEach((k, v) -> {
-                if (k != null) v.forEach(val -> response.addHeader(k, val));
+
+            // Copy response headers
+            conn.getHeaderFields().forEach((key, values) -> {
+                if (key != null) {
+                    for (String value : values) {
+                        response.addHeader(key, value);
+                    }
+                }
             });
 
-            // HEAD request → no body
-            if ("HEAD".equalsIgnoreCase(request.getMethod())) return;
-
+            // Copy response body
             try (InputStream is = (status >= 400 ? conn.getErrorStream() : conn.getInputStream())) {
-                if (is != null) StreamUtils.copy(is, response.getOutputStream());
+                if (is != null) {
+                    StreamUtils.copy(is, response.getOutputStream());
+                }
             }
 
         } catch (Exception e) {
+            // Fallback page on connection error
             response.setStatus(500);
             response.setContentType(MediaType.TEXT_HTML_VALUE);
-            response.getOutputStream().write(
-                    "<h1>Server Error</h1><p>Platform fetch failed.</p>".getBytes(StandardCharsets.UTF_8)
-            );
+            String html = "<!DOCTYPE html>" +
+                    "<html><head><title>Error</title>" +
+                    "<style>" +
+                    "body { font-family: Arial, sans-serif; text-align: center; background: #f8f8f8; padding-top: 100px; }" +
+                    "h1 { color: #e74c3c; }" +
+                    "p { color: #555; font-size: 18px; }" +
+                    "a { color: #3498db; text-decoration: none; }" +
+                    "</style></head>" +
+                    "<body>" +
+                    "<h1>Oops! Something went wrong</h1>" +
+                    "<p>Could not fetch project: <strong>" + subdomain + "</strong></p>" +
+                    "<p>Try again later or go back to <a href='/'>home</a>.</p>" +
+                    "</body></html>";
+            response.getOutputStream().write(html.getBytes(StandardCharsets.UTF_8));
         }
     }
 }
