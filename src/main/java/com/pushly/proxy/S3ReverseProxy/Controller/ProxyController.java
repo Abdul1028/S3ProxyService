@@ -306,7 +306,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 @RestController
-class ProxyController {
+public class ProxyController {
 
     private static final String API_RESOLVE_URL =
             "https://api.wareality.tech/internal/projects/resolve";
@@ -320,13 +320,23 @@ class ProxyController {
     private final ObjectMapper mapper = new ObjectMapper();
 
     // ====== CACHE (30s TTL) =======
-    private final Map<String, ResolveInfo> resolveCache = new ConcurrentHashMap<>();
-    private final long RESOLVE_TTL_MS = 30_000;
+    public final Map<String, ResolveInfo> resolveCache = new ConcurrentHashMap<>();
+    private final long RESOLVE_TTL_MS = 86_400_000;
 
-    private static class ResolveInfo {
+    public static class ResolveInfo {
         public String projectId;
         public String activeDeploymentId;
         public long expiresAt;
+
+        @Override
+        public String toString() {
+            return "ResolveInfo{" +
+                    "projectId='" + projectId + '\'' +
+                    ", activeDeploymentId='" + activeDeploymentId + '\'' +
+                    ", expiresAt=" + expiresAt +
+                    ", expiresAtHuman='" + new java.util.Date(expiresAt) + '\'' +
+                    '}';
+        }
     }
 
     private ResolveInfo resolveProject(String subdomain) throws Exception {
@@ -334,8 +344,10 @@ class ProxyController {
         ResolveInfo cached = resolveCache.get(subdomain);
 
         if (cached != null && cached.expiresAt > now) {
+            System.out.println("[CACHE HIT] " + subdomain + " -> " + cached.toString());
             return cached;
         }
+
 
         URL url = new URL(API_RESOLVE_URL + "?subdomain=" + subdomain);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -355,6 +367,8 @@ class ProxyController {
             info.expiresAt = now + RESOLVE_TTL_MS;
 
             resolveCache.put(subdomain, info);
+            System.out.println("[CACHE SET] " + subdomain + " -> " + info);
+
             return info;
         }
     }
